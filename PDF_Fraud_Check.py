@@ -1,7 +1,7 @@
 ###########################################################################################
 #
 # Author: Rasmus Riis Kristensen
-# Contact: rrk001@politi.dk
+# Contact: riisras((at))gmail.com
 # Name: PDF_Fraud_Check.py
 # Usage: Execute the script in a folder containing PDF files. Altered PDF files
 # will be put in subfolders to each examined folder in a folder named 'Altered files'.
