@@ -6,20 +6,20 @@ import csv
 
 def process_pdf_files(directory):
     """
-    Processer PDF-filer i den angivne mappe og dens undermapper.
+    Processes PDF files in the specified folder and its subfolders.
     """
-    filecount = 0  # Tæller antallet af PDF-filer fundet
-    Alterations = 0  # Tæller antallet af ændringer fundet
-    altered_files_bool = False  # Flag for at angive om der er fundet ændrede filer
-    totalAltered = 0  # Tæller antallet af ændrede dokumenter
+    filecount = 0  # Counts the number of PDF files found
+    Alterations = 0  # Counts the number of alterations found
+    altered_files_bool = False  # Flag to indicate if altered files have been found
+    totalAltered = 0  # Counts the number of altered documents
 
-    # Åbner filen 'filinfo.tsv' i tilføj-til-eksisterende-mode og opretter en writer
+    # Opens the file 'filinfo.tsv' in append mode and creates a writer
     with open('filinfo.tsv', 'a+', newline='') as info:
         writer = csv.writer(info, delimiter='\t')
         headerrow = ["Original file name", "Altered file name", "Path", "Filehash", "Created", "Modified", "EXIFTool output"]
         writer.writerow(headerrow)
 
-    # Går igennem mappen og dens undermapper
+    # Walks through the folder and its subfolders
     for root, _, files in os.walk(directory):
         for filename in files:
             if filename.lower().endswith(".pdf"):  # Check for pdf extension
@@ -30,16 +30,16 @@ def process_pdf_files(directory):
                 create_date = datetime.fromtimestamp(statinfo.st_ctime)
                 modified_date = datetime.fromtimestamp(statinfo.st_mtime)
 
-                # Laver exiftool output på den oprindelige fil
+                # Generates exiftool output for the original file
                 cmd = "./exiftool.exe"
                 original_exif_data = subprocess.run([cmd, file_path], capture_output=True, text=True).stdout.strip().replace('\n', chr(10))
 
-                # Skriver information om den oprindelige fil til 'filinfo.tsv'
+                # Writes information about the original file to 'filinfo.tsv'
                 with open('filinfo.tsv', 'a+', newline='') as info:
                     writer = csv.writer(info, delimiter='\t')
                     writer.writerow([filename, "", file_path, filehash, create_date, modified_date, original_exif_data])
 
-                # Åbner den oprindelige fil i binær læse-mode
+                # Opens the original file in binary read mode
                 with open(file_path, 'rb') as f:
                     content = f.read()
                     i = None
@@ -50,21 +50,21 @@ def process_pdf_files(directory):
                             positions.append(i)
                     positions.sort()
 
-                    # Hvis der er mere end én %%EOF-sekvens, betyder det at filen har været ændret
+                    # If there is more than one %%EOF sequence, it means the file has been altered
                     if len(positions) > 1:
                         altered_files_bool = True
                         altered_dir = os.path.join(root, "Altered_files")
                         if not os.path.exists(altered_dir):
                             os.mkdir(altered_dir)
                         print(f"Found previous version in {filename}")
-                        v=0
-                        totalAltered +=1
+                        v = 0
+                        totalAltered += 1
 
-                        # Går igennem hver ændring og udtrækker den til en ny fil
+                        # Iterates through each alteration and extracts it to a new file
                         for count, i2 in enumerate(positions):
                             if 1000 <= i2 <= len(content) - 500:
                                 Alterations += 1
-                                v +=1
+                                v += 1
                                 i2 += 5  # Include %%EOF
                                 print(f"Found {v} previous version in {filename}")
                                 altered_filename = f"{filename}_Offset_{i2}_version_{v}.pdf"
@@ -75,15 +75,15 @@ def process_pdf_files(directory):
                                 cmd = "./exiftool.exe"
                                 exif_data = subprocess.run([cmd, output_path], capture_output=True, text=True).stdout.strip().replace('\n', chr(10))
 
-                                # Skriver information om den ændrede fil til 'filinfo.tsv'
+                                # Writes information about the altered file to 'filinfo.tsv'
                                 with open('filinfo.tsv', 'a+', newline='') as info:
                                     writer = csv.writer(info, delimiter='\t')
                                     writer.writerow([filename, altered_filename, output_path, filehash_altered, create_date, modified_date, exif_data])
 
-    # Udskriver statistik om antallet af fundne ændringer
+    # Prints statistics about the number of alterations found
     if altered_files_bool:
         print(f"Found {Alterations} alterations in {totalAltered} documents.")
     else:
         print("No alterations found.")
 
-process_pdf_files('.')  # Kald funktionen med den aktuelle mappe som argument
+process_pdf_files('.')  # Calls the function with the current folder as an argument
